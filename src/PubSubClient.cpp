@@ -182,6 +182,7 @@ boolean PubSubClient::connect(const char *id, const char *user, const char *pass
                     _client->stop();
                     return false;
                 }
+                callWatchdog();
             }
             uint8_t llen;
             uint16_t len = readPacket(&llen);
@@ -213,6 +214,7 @@ boolean PubSubClient::readByte(uint8_t * result) {
      if(currentMillis - previousMillis >= ((int32_t) MQTT_SOCKET_TIMEOUT * 1000)){
        return false;
      }
+     callWatchdog();
    }
    *result = _client->read();
    return true;
@@ -238,12 +240,13 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
     uint8_t digit = 0;
     uint16_t skip = 0;
     uint8_t start = 0;
-
+SerialUSB.print("/");
     do {
         if(!readByte(&digit)) return 0;
         buffer[len++] = digit;
         length += (digit & 127) * multiplier;
         multiplier *= 128;
+SerialUSB.print("\\");
     } while ((digit & 128) != 0);
     *lengthLength = len-1;
 
@@ -259,6 +262,7 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
         }
     }
 
+SerialUSB.print("-");
     for (uint16_t i = start;i<length;i++) {
         if(!readByte(&digit)) return 0;
         if (this->stream) {
@@ -271,6 +275,7 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
         }
         len++;
     }
+SerialUSB.print("|");
 
     if (!this->stream && len > MQTT_MAX_PACKET_SIZE) {
         len = 0; // This will cause the packet to be ignored.
@@ -280,14 +285,18 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
 }
 
 boolean PubSubClient::loop() {
+SerialUSB.print("l");    
     if (connected()) {
+SerialUSB.print("c");
         unsigned long t = millis();
         if ((t - lastInActivity > MQTT_KEEPALIVE*1000UL) || (t - lastOutActivity > MQTT_KEEPALIVE*1000UL)) {
             if (pingOutstanding) {
+SerialUSB.println("-- PING outstanding - lost connection --");
                 this->_state = MQTT_CONNECTION_TIMEOUT;
                 _client->stop();
                 return false;
             } else {
+SerialUSB.println("P");
                 buffer[0] = MQTTPINGREQ;
                 buffer[1] = 0;
                 _client->write(buffer,2);
@@ -297,6 +306,7 @@ boolean PubSubClient::loop() {
             }
         }
         if (_client->available()) {
+SerialUSB.print("a");
             uint8_t llen;
             uint16_t len = readPacket(&llen);
             uint16_t msgId = 0;
@@ -585,4 +595,17 @@ PubSubClient& PubSubClient::setStream(Stream& stream){
 
 int PubSubClient::state() {
     return this->_state;
+}
+
+void PubSubClient::callWatchdog()
+{
+    if (watchdogcallback != nullptr)
+    {
+        (watchdogcallback)();
+    }
+}
+
+void PubSubClient::setWatchdogCallback(WATCHDOG_CALLBACK_SIGNATURE)
+{
+    this->watchdogcallback = watchdogcallback;
 }

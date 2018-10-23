@@ -79,6 +79,7 @@
 #else
 #define MQTT_CALLBACK_SIGNATURE void (*callback)(char*, uint8_t*, unsigned int)
 #endif
+#define WATCHDOG_CALLBACK_SIGNATURE void (*watchdogcallback)()
 
 class PubSubClient {
 private:
@@ -94,11 +95,13 @@ private:
    boolean readByte(uint8_t * result, uint16_t * index);
    boolean write(uint8_t header, uint8_t* buf, uint16_t length);
    uint16_t writeString(const char* string, uint8_t* buf, uint16_t pos);
+   void callWatchdog();
    IPAddress ip;
    const char* domain;
    uint16_t port;
    Stream* stream;
    int _state;
+   WATCHDOG_CALLBACK_SIGNATURE;
 public:
    PubSubClient();
    PubSubClient(Client& client);
@@ -138,6 +141,7 @@ public:
    boolean loop();
    boolean connected();
    int state();
+   void setWatchdogCallback(WATCHDOG_CALLBACK_SIGNATURE);
 };
 
 
