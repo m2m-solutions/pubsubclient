@@ -261,18 +261,20 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
         }
     }
 
-    for (uint16_t i = start;i<length;i++) {
-        if(!readByte(&digit)) return 0;
-        if (this->stream) {
-            if (isPublish && len-*lengthLength-2>skip) {
-                this->stream->write(digit);
-            }
-        }
-        if (len < MQTT_MAX_PACKET_SIZE) {
-            buffer[len] = digit;
-        }
-        len++;
-    }
+    // for (uint16_t i = start;i<length;i++) {
+        // if(!readByte(&digit)) return 0;
+        // if (this->stream) {
+        //     if (isPublish && len-*lengthLength-2>skip) {
+        //         this->stream->write(digit);
+        //     }
+        // }
+        // if (len < MQTT_MAX_PACKET_SIZE) {
+        //     buffer[len] = digit;
+        // }
+        // len++;
+    // }
+    uint32_t read = _client->read(&buffer[len], length - start);
+    len += read;
 
     if (!this->stream && len > MQTT_MAX_PACKET_SIZE) {
         len = 0; // This will cause the packet to be ignored.
